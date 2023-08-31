@@ -1,0 +1,208 @@
+---
+title: "chapter 7"
+author: "Rchemist"
+format: html
+editor: visual
+---
+
+### 데이터 시각화
+
+#### ggplot 기본 문법
+
+```{r}
+ggplot(data, 
+	aes(x, 
+	    y, 
+	    color, 
+	    fill, 
+	    group, 
+	    shape, 
+	    size)
+	) +  
+	geom_point( ) 
+  geom_col( ) 
+  geom_histogram( )
+  geom_line( ) 
+  geom_boxplot( ) + 
+    
+	scale_x_continuous( ) 
+  scale_x_discrete( )  
+	scale_y_continuous( )
+	scale_y_discrete( )  
+	
+	scale_color_continuous( )
+	scale_color_discrete( )
+	scale_color_palette( ) 
+	scale_color_manual()
+	
+	scale_fill_continuous( )
+	scale_fill_discrete( )
+	scale_fill_palette( ) 
+	scale_fill_manual() + 
+	
+	theme_[ ] 
+	
+
+```
+
+```{r}
+head(diamonds)
+```
+
+```{r}
+require(ggplot2)
+require(dplyr)
+diamonds %>% 
+  ggplot(aes(x=carat,y=price,color=cut))+
+  geom_point() +
+  scale_color_brewer() +
+  theme_bw()
+```
+
+```{r}
+require(data.table)
+dt7 <- fread('csv/7주차_mental_health.csv')
+dt7_2 <- fread('csv/7주차_hapiness_2021.csv')
+dt7[,Age:=as.integer(Age)]
+dt7 <- dt7[Age %between% c(0,100)]
+dt7[,Sex := ifelse(tolower(Gender) %in% c('cis male','male','cis man','m','mail','maile','make','Male (CIS)','msle','man'),'male',
+                  ifelse(tolower(Gender) %in% c('cis female','cis-female/femme','femail','femake','female','female ','woman'),'female',NA))]
+dt7 <- dt7[!is.na(Sex)]
+```
+
+### 셀프 과제
+
+### 1) 데이터 준비하기
+
+과제를 수행하기 위해 두 가지 데이터를 불러옵니다.
+
+-   정신건강 데이터
+
+-   행복 데이터
+
+```{r}
+
+```
+
+### 2) 데이터 분포 시각화
+
+2-1. 정신 건강 데이터의 Age column에 대한 histogram을 그리세요.
+
+```{r}
+
+```
+
+2-2. 정신 건강 데이터의 Age에 대한 histogram을 treatment로 색상(fill)을 나누어서 그리세요.
+
+```{r}
+
+```
+
+2-3. 정신 건강 데이터의 Age에 대한 density plot을 remote_work로 색상(fill)을 나누어서 그리세요.
+
+```{r}
+
+```
+
+### 3) 데이터 특징 시각화
+
+3-1. 행복 데이터에서 regional indicator column 별로 Healthy life expectancy column의 평균을 시각화하는 bar plot을 그리세요.
+
+```{r}
+
+```
+
+3-2. 정신건강 데이터에서 seek_help column별로 Age에 대한 box plot을 그린 뒤, 성별에 따라 색상을 구분하세요.
+
+```{r}
+
+```
+
+### 4) 데이터 관계 시각화
+
+4-1. 행복 데이터의 Social support 와 Health life expectancy column을 활용하여 scatter plot을 그리세요.
+
+\- 색상(color)은 Health life expectancy별로 구분하세요.
+
+```{r}
+
+```
+
+4-2. 정신건강 데이터의 quarter와 treatment 별 Age의 평균을 계산한 뒤, quarter에 따른 age의 평균을 treatment 별로 line plot을 그리세요
+
+\- 색상(color)는 treatment로 구분하세요.
+
+```{r}
+dt7 %>% head()
+```
+
+#### 1. Histogram
+
+`Age`에 대한 histogram 그리기
+
+```{r}
+
+ggplot(dt7, aes(x=Age, fill=treatment)) + geom_histogram(position = 'dodge')
+```
+
+```{r}
+dt7_2
+```
+
+#### 2. density plot
+
+```{r}
+head(dt7)
+```
+
+```{r}
+ggplot(dt7, aes(x=Age, fill=remote_work)) + 
+  geom_density()
+```
+
+#### 3. bar plot
+
+```{r}
+dt7_2[,.(mean=mean(`Healthy life expectancy`)),by=`Regional indicator`]%>% 
+  ggplot(aes(x=`Regional indicator`,y=mean,
+             fill=`Regional indicator`))+
+  geom_col() + 
+  theme(axis.text.x = element_blank())
+```
+
+```{r}
+dt7[,.N,by=.(Sex,mental_health_consequence)][,prop:=N/sum(N),by=.(mental_health_consequence)] %>% 
+  ggplot(aes(x=mental_health_consequence,y=prop,
+             fill=Sex))+
+  geom_col()
+dt7[,table(mental_health_consequence)]
+```
+
+#### 4. box plot
+
+```{r}
+
+ggplot(dt7,aes(x=seek_help,y=Age,fill=Sex)) +
+  geom_boxplot()
+```
+
+#### 5. scatter plot
+
+```{r}
+ggplot(dt7_2, aes(x=`Social support`,y=`Healthy life expectancy`, color=`Regional indicator`)) + 
+  geom_jitter()  +
+  theme_classic()
+```
+
+#### 6. line plot
+
+```{r}
+dt7[,quarter := ifelse(as.numeric(substr(Timestamp,6,7))<4,'Q1',
+                       ifelse(as.numeric(substr(Timestamp,6,7))<7,'Q2',
+                              ifelse(as.numeric(substr(Timestamp,6,7))<10,'Q3','Q4')))]
+dt7[,.(mean_age=mean(Age)),by=.(quarter,treatment)] %>% 
+  ggplot(aes(x=quarter, y=mean_age, group=treatment, color=treatment))+ geom_line()
+
+dt7_2[`Regional indicator` %like% 'Europe',.(mean=mean(`Ladder score`)),by=`Regional indicator`] %>% ggplot(aes(x=`Regional indicator`,y=mean)) + geom_line()
+
+```
