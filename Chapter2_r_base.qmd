@@ -173,8 +173,16 @@ R에서는 경고 메시지가 뜨더라도 실행은 되었지만, 에러 메�
 library(abcdef)
 ```
 
+``` {style="color: red"}
+Error in library(abcdef) : there is no package called 'abcdef'
+```
+
 ```{r}
 require(xyz)
+```
+
+```         
+Warning: there is no package called ‘xyz’
 ```
 :::
 
@@ -188,7 +196,7 @@ R의 기본적인 데이터의 유형은 크게 `numeric`, `charcter`, `factor`,
 
 ### 1) numeric
 
-`numeric`은 이름에서 알 수 있듯이 숫자 데이터입니다. numeric은 정수와 실수를 모두 포함합니다. R에서 정수는 `integer`, 실수는 `double`로 표현됩니다.
+`numeric`은 이름에서 알 수 있듯이 숫자 데이터입니다. `numeric`은 정수와 실수를 모두 포함합니다. R에서 정수는 `integer`, 실수는 `double`로 표현됩니다.
 
 #### a. integer
 
@@ -237,7 +245,7 @@ ggplot(temp) +
 
 ```
 
-그러나 이 둘을 구분해서 사용하는 경우는 드뭅니다. 모든 숫자 데이터는 numeric으로 사용하셔도 상관없습니다.
+그러나 이 둘을 구분해서 사용하는 경우는 드뭅니다. 모든 숫자 데이터는 `numeric`으로 사용하셔도 상관없습니다.
 
 ### 2) character
 
