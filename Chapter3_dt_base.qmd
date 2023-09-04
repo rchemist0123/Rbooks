@@ -16,9 +16,9 @@ editor: source
     `data.table`은 기본 `data.frame` 구조보다 훨씬 빠르게 데이터를 연산합니다.
 
 ```{r}
-require(data.table)
-require(dplyr)
-require(microbenchmark)
+library(data.table)
+library(dplyr)
+library(microbenchmark)
 data('storms')
 df_test <- function(){
   aggregate(x=storms[,c('wind','pressure')],
@@ -37,7 +37,10 @@ dt_test <- function(){
   storm_dt[,.(wind=mean(wind), pressure=mean(pressure)), by=.(name, year,month,day)]
 }
 
-microbenchmark(df_test(), dplyr_test(), dt_test(), times=10)
+microbenchmark(df_test(), 
+               dplyr_test(), 
+               dt_test(), 
+               times=10)
 
 ```
 
@@ -72,10 +75,10 @@ library(microbenchmark)
 microbenchmark(
   read.csv = read.csv('https://raw.githubusercontent.com/rchemist0123/datasets/main/NHANES.csv'),
   fread = fread('https://raw.githubusercontent.com/rchemist0123/datasets/main/NHANES.csv'),
-  times=50
+  times=10
 )
 ```
-확인 결과, `fread()`가 `read.csv()`에 비해 약 5~6배는 빠른 것을 알 수 있습니다.
+확인 결과, `fread()`가 `read.csv()`에 비해 약 4~5배는 빠른 것을 알 수 있습니다.
 
 `fread`를 통해 불러온 파일의 `class`는 `data.table`입니다.
 
@@ -83,7 +86,7 @@ microbenchmark(
 class(dt)
 ```
 
-앞서 언급한 것처럼, data.frame을 상속받아 만들었기 때문에, data.frame 역시 같이 출력되는 것을 알 수 있습니다.
+앞서 언급한 것처럼, data.table에는 data.frame을 상속받아 만들었기 때문에, data.frame 역시 같이 출력되는 것을 알 수 있습니다.
 
 `data.table`을 출력했을 때, `data.frame`과 다른 점은 크게 두 가지가 있습니다. `data.table`은 우선 모든 column에 대해 첫 5개, 마지막 5개의 행을 출력합니다.
 
@@ -133,16 +136,16 @@ library(dplyr)
 head(starwars)
 ```
 
-data.table 역시 간단하게 옵션만 설정해준다면 각 열별 데이터 유형을 확인할 수 있습니다.
+`data.table` 역시 간단하게 옵션만 설정해준다면 각 열별 데이터 유형을 확인할 수 있습니다.
 ```{r}
-options(datatable.print.class = TRUE)
+options(datatable.print.class = TRUE) # 데이터 유형 출력 설정
 head(df)
 ```
 :::
 
 ------------------------------------------------------------------------
 
-## 3. i: data.table 행
+## 3. i: data.table 행 다루기
 
 통상적으로 data.table에서 행(row)을 다루는 부분을 `i` 라고 부릅니다.
 
@@ -150,7 +153,7 @@ data.table에서 행을 다룬다는 것은 [특정한 조건을 만족하는 �
 
 자, 이제 data.table에서 행을 다루는 방법을 살펴보겠습니다.
 
-### 1) 논리 연산자를 이용한 row filtering
+### 1) 논리 연산자를 이용한 행 추출
 
 Chapter 2의 data.frame row 부분에서도 배웠지만, 기본적으로 i에서는 논리 연산자를 이용해 행을 선택합니다. 논리연산자의 조건을 만족하는 행들, 즉 논리 연산자의 실행 결과가 `TRUE` 인 행들만 추출하는 것입니다.
 
@@ -176,7 +179,7 @@ dt[gender=='female' | age>=50] #여성 또는 50세 이상
 data.table이 훨씬 더 간단하죠? 😃
 :::
 
-### 2) 파이프 연산자를 이용한 row filtering
+### 2) 파이프 연산자를 이용한 행 추출
 
 `data.table`에서는 논리 연산자 뿐만 아니라 파이프 연산자(`%%`가 붙은 연산자)를 이용하여, 조건을 충족시키는 행을 선택할 수 있습니다. 파이프 연산자 역시 조건을 만족하는 경우인 `TRUE` 에 해당하는 값들만 선택합니다. 
 
@@ -214,7 +217,7 @@ dt[like(race,'ite')]
 ```
 :::
 
-### 3) 함수를 이용한 row filtering
+### 3) 함수를 이용한 행 추출
 
 논리 연산자나 파이프 연산자 뿐만 아니라 `TRUE`/`FALSE`를 반환하는 다른 함수들도 행을 선택하는 데 활용할 수 있습니다. 가장 대표적인 함수가 바로 `is.na()` 입니다.
 
@@ -272,7 +275,7 @@ setDT() #  data.table로 저장
 
 ------------------------------------------------------------------------
 
-## 4. j: data.table 열
+## 4. j: data.table 열 다루기
 
 `j` 부분은 데이터의 열 (column)을 다루는 부분을 의미합니다. `J` 부분을 통해 원하는 열들을 선택하거나, 특정 열을 계산할 수 있습니다. 또한 새로운 변수를 생성하거나 기존의 변수를 수정 또는 삭제할 수 있습니다.
 
@@ -309,7 +312,7 @@ column을 계산하는 것 역시 data.table의 `j` 부분에서 담당합니다
 dt[,mean(BMI,na.rm=T)]
 ```
 
-만약 여러 개의 column에 대해 계산하는 경우 또는 계산하는 값을 data.table 형태로 출력하고 싶은 경우, column 선택에서 배웠던 `.()`를 활용하면 됩니다.
+만약 여러 개의 column에 대해 계산하는 경우 또는 계산하는 값을 `data.table` 형태로 출력하고 싶은 경우, column 선택에서 배웠던 `.()`를 활용하면 됩니다.
 
 ```{r}
 dt[,.(mean_BMI = mean(BMI, na.rm=T),
@@ -320,9 +323,9 @@ dt[,.(mean_BMI = mean(BMI, na.rm=T),
 
 data.table에는 특수한 기호가 있습니다. 바로 `:=` 입니다. walrus (바다코끼리) 연산자라고도 불리기도 합니다. 바다코끼리의 어금니를 닮아서 붙여진 이름 같습니다.
 
-![바다코끼리(Walrus)의 어금니가 `:=` 와 닮았습니다.](walrus.jpg){fig-align="center" width="400"}
+![바다코끼리(Walrus)의 어금니가 `:=` 와 닮았습니다.](images/walrus.jpg){fig-align="center" width="400"}
 
-data.table을 사용한다면 `:=` 연산자를 활용하는 것이 굉장히 중요합니다. 새로운 column을 추가하거나, 기존의 column을 변경할 때, 또는 column을 삭제할 때 활용되는 연산자 입니다.
+`data.table`을 사용한다면 `:=` 연산자를 활용하는 것이 굉장히 중요합니다. 새로운 column을 추가하거나, 기존의 column을 변경할 때, 또는 column을 삭제할 때 활용되는 연산자 입니다.
 
 #### a. column의 생성
 
@@ -399,13 +402,13 @@ dt[,column_name := NULL][]
 `by`: 특정 column에 따라 `j` 를 계산합니다. 예를 들어 성별에 따른 나이의 평균을 구하는 경우, 따라서 [`by`를 사용하기 위해서는 `j` 부분이 존재해야]{.underline} 합니다.
 
 ```{r}
-dt[,mean(age),by=MaritalStatus]
+dt[,.(mean_age = mean(age)),by=MaritalStatus]
 ```
 
 `keyby`: by와 마찬가지로 특정 그룹에 따라 계산합니다. 하지만 `by`와 다르게 그룹으로 선택된 column을 기준으로 정렬하여 결과값을 출력합니다.
 
 ```{r}
-dt[,mean(age),keyby=MaritalStatus]
+dt[,.(mean_age = mean(age)),keyby=MaritalStatus]
 ```
 
 혼인상태에 따른 나이의 평균 값이 혼인상태의 이름으로 오름차순 정렬이 되어 출력된 것을 확인할 수 있습니다.
@@ -416,37 +419,37 @@ dt[,mean(age),keyby=MaritalStatus]
 
 -   `fifelse()`: fast ifelse입니다. `ifelse()`보다 더 빠르게 작업을 수행합니다.기본 `ifelse()`와 다르게 yes와 no 자리에 오는 인자들의 유형(type)이 반드시 동일해야 합니다.
 
-    ```{r}
-    dt[,SEX := fifelse(gender=='m','남성','여성')]
-    dt[,Temp := fifelse(age<10,NA,age)] # error 발생.
-    ```
+```{r}
+dt[,SEX := fifelse(gender=='m','남성','여성')]
+dt[,Temp := fifelse(age<10,NA,age)] # error 발생.
+```
 
--   `fcase()` : fast case when입니다. `ifelse()`처럼 조건을 사용해 데이터를 조작하지만, 반복적으로 `ifelse()` 함수를 계속해서 사용할 필요가 없기 때문에 더 적은 코드를 사용합니다.
+-   `fcase()` : fast + case when입니다. case when은   `ifelse()`처럼 조건을 사용해 데이터를 조작하지만, 반복적으로 `ifelse()` 함수를 계속해서 사용할 필요가 없기 때문에 더 적은 코드를 사용합니다. 
 
-    ```{r}
-    dt[,age_group2 := fcase(
-      age<20,'10대',
-      age<30,'20대',
-      age<40,'30대',
-      age<50,'40대',
-      age<60,'50대'
-    )]
-    dt[,table(age_group2, useNA = 'always')]
-    ```
+```{r}
+dt[,age_group2 := fcase(
+  age<20,'10대',
+  age<30,'20대',
+  age<40,'30대',
+  age<50,'40대',
+  age<60,'50대'
+)]
+dt[,table(age_group2, useNA = 'always')]
+```
 
     조건에 해당되지 않는 나머지 값들은 자동으로 `NA` 처리 됩니다. 나머지 값들에 값을 주고 싶다면 `default` 인자를 활용하면 됩니다.
 
-    ```{r}
-    dt[,age_group2 := fcase(
-      age<20,'10대',
-      age<30,'20대',
-      age<40,'30대',
-      age<50,'40대',
-      age<60,'50대',
-      default='60대 이상'
-    )]
-    dt[,table(age_group2, useNA = 'always')]
-    ```
+```{r}
+dt[,age_group2 := fcase(
+  age<20,'10대',
+  age<30,'20대',
+  age<40,'30대',
+  age<50,'40대',
+  age<60,'50대',
+  default='60대 이상'
+)]
+dt[,table(age_group2)]
+```
 
 -   `uniqueN()` : 고유한 데이터의 수를 확인하는 데 사용하는 함수입니다. 주로 사람의 ID 수를 카운트 하는 데 사용합니다.
 
@@ -454,11 +457,19 @@ dt[,mean(age),keyby=MaritalStatus]
 dt[,BMI2:=fifelse(is.na(BMI),'donno', fifelse(BMI>=30,'obese','normal'))][,uniqueN(BMI2)]
 ```
 
+-   `nafill()`: 열 단위로 결측치(`NA`)를 채워넣습니다. 기존의 `fifelse()`를 사용해서, NA인 조건을 찾지 않아도 됩니다. `type` 인자는 `const`, `locf`, `nocb` 등을 선택할 수 있습니다.  
+    -   `const`: 특정 상수를 넣는 것입니다. 평균, 중앙값과 같은 특정 값으로 모든 NA를 채워넣습니다. `type=const`일 경우는 `fill`인자에는 채워넣을 값을 입력합니다.
+    -   `locf`: Last Observation Carried Forward: `NA`가 아닌 마지막 값으로 다음 값을 `NA`로 채워넣습니다. 예를 들어 6행이 `NA`이고 5행이 `NA`가 아니라면 5행의 값으로 6행의 `NA`를 채워넣습니다.
+    -   `nocb`: Next Observation Carried Backward: `NA`가 아닌 첫 값으로 이전 값을 `NA` 로 채워넣습니다. 예를 들어 5행이 `NA`이고 6행이 `NA`가 아니라면 6행의 값으로 5행의 `NA`를 채워넣습니다.
+```{r}
+dt[, AlcoholDay2 := nafill(AlcoholDay, type='const', fill = mean(AlcoholDay, na.rm=T) )]
+```
+
 ------------------------------------------------------------------------
 
 ## 7. 셀프 과제
 
-수업시간에 배운 내용을 토대로 data.table 문법을 활용하여 문제를 해결합니다.
+수업시간에 배운 내용을 토대로 `data.table` 문법을 활용하여 문제를 해결합니다.
 
 [과제 데이터의 변수 설명서](https://docs.google.com/spreadsheets/d/1JTxiXAtXOVwnmOeIPW1ZYlRAwYmKKjXqtcMx0xTDkiw/edit#gid=1274720220)를 참고하여 문제를 풀어보세요. 😄
 
