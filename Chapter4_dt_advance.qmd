@@ -2,7 +2,7 @@
 title: "chapter 4. data.table 심화"
 author: "Rchemist"
 format: html
-editor: visual
+editor: source
 ---
 
 Chapter 3 에서는 대용량의 데이터를 빠르게 처리할 수 있는 `data.table` 패키지에 대해 배워봤습니다.
@@ -11,20 +11,71 @@ Chapter 3 에서는 대용량의 데이터를 빠르게 처리할 수 있는 `da
 
 ## 1. 특수 기호
 
-data.table 패키지에는 유용하게 사용할 수 있는 특수 기호들이 있습니다. 이 특수한 기호들은 다른 패키지에서는 사용할 수 없는 것들로, data.table 형태의 데이터를 다룰 때만 사용이 가능합니다.
+`data.table` 패키지에는 유용하게 사용되는 특수 기호들이 있습니다. 이 특수한 기호들은 다른 패키지에서는 사용할 수 없는 것들로, `data.table` 형태의 데이터를 다룰 때만 사용이 가능합니다.
 
-이번에 배울 data.table의 특수 기호는 크게 3가지입니다. 바로 .SD, .N, .I 입니다. 이 특수기호들은 모두 data.table의 j(column 부분)에서 쓰입니다.
+이번에 배울 `data.table`의 특수 기호는 크게 3가지입니다. 바로 `.SD`, `.N`, `.I` 입니다. 이 특수기호들은 일반적으로 `data.table`의 `j`(열 부분)에서 쓰입니다.
 
-### 1) lapply + .SD
+### 1) `.N`
+
+`.N`은 데이터의 수, 다시 말해 행의 개수를 확인하는 특수기호입니다. `.N`은 주로 `by`와 함께 됩니다. `by`를 통해 특정 집단의 분포별로 몇 명이 있는지, 또는 몇 건의 데이터가 있는지 확인합니다.
+
+예를 들어, 인종(`race`)에 따른 데이터의 수를 확인하고 싶을 때는 아래와 같이 사용합니다.
+
+```{r}
+dt[,.N, by=race]
+```
+
+::: callout-note
+## .N을 활용해야하는 이유
+
+사실 그룹별 응답 수는 `table()` 함수를 이용해도 구할 수 있습니다. 그러나 `.N`을 이용하게 되면 각 범주별 빈도수를 [`data.table` 문법 내에서]{.underline} 구할 수 있기 때문에 활용성에 있어 `table()`보다 더 뛰어나다고 할 수 있습니다.
+
+출력 형태가 `data.table`이다보니, 추가로 열을 다룰 때 편리합니다. 예를 들어, 인종에 따른 빈도와 비율을 확인한다고 했을 때,
+
+```{r}
+# table() 이용 시
+dt[,prop.table(table(race))]
+
+# .N
+dt[,.(N=.N),Race1][,.(Race1, N,prop=N/sum(N)*100)]
+```
+:::
+
+### 2) `.I`
+
+`.I`는 `j` 부분에서 행을 다루기 특수기호입니다.
+
+보통 `.I`는 특정 조건을 만족하는 row의 위치를 찾을 때 사용합니다. 특히 `by`가 있는 경우, 다시 말해 범주별로 row의 위치를 찾을 때 많이 사용합니다.
+
+집단별 행이 필요하지 않다면, `j`가 아닌 `i` 부분에서 행을 선택할 수 있습니다. 그러나 i 부분만 입력하게 될 경우, 집단 별 조건을 확인할 수 없습니다. 왜냐하면 `by`를 사용하기 위해서는 `j`가 선행되어야 하기 때문입니다.
+
+따라서 `i` 부분에서 바로 행을 추출하는 것이 아니라, `j` 부분에서 집단별로 조건을 만족시키는 행의 번호를 찾아서 사용합니다.
+
+또한 `.I`를 사용하는 경우 행의 번호를 확인할 수 있기 때문에, 그 행의 번호에 해당하는 모든 열을 사용할 수 있습니다.
+
+예를 들어, 인종별 첫 번째 행을 선택하는 경우는 다음과 같이 실행할 수 있습니다.
+
+```{r}
+dt[dt[,.I[1L],by=race]$V1]
+```
+
+이번에는 인종 별로 첫 번째 행이 아니라 Height가 최대인 (키가 가장 큰) 데이터를 추출해보겠습니다.
+
+```{r}
+dt[dt[,.I[max(Height,na.rm=T)],by=race]$V1]
+dt[dt[,.I[which.max(Height)],by=race]$V1]
+```
+
+### 3) `lapply` + `.SD`
 
 `.SD`는 Subset Data의 약자입니다. 말그대로 데이터의 일부분을 선택하기 위한 특수기호(special symbols)입니다.
 
-`.SD`와 함께 사용되는 것이 있습니다. 바로 `.SDcols` 입니다. `.SDcols`를 통해 데이터 중 원하는 column을 선택할 수 있습니다.
+`.SD`와 함께 사용되는 것이 있습니다. 바로 `.SDcols` 입니다. `.SDcols`를 통해 데이터 중 원하는 열 선택할 수 있습니다.
 
-만약 .SDcols 없이 .SD만 사용한다면 데이터의 모든 column을 선택한다는 뜻입니다.
+만약 `.SDcols` 없이 `.SD`만 사용한다면 데이터의 모든 열을 선택한다는 뜻입니다.
 
 ```{r}
-dt <- fread('csv/수업자료_NHANES.csv')
+dt <- fread('https://raw.githubusercontent.com/rchemist0123/datasets/main/NHANES.csv')
 dt[,head(.SD)]
 dt[,str(.SD)]
 ```
@@ -125,51 +176,6 @@ target <- c('Age','BMI')
 dt[,(target):=lapply(.SD, \(x) ifelse(is.na(x), median(x,na.rm=T),x)),.SDcols=target]
 ```
 
-### 2) `.N`
-
-`.N`은 데이터의 수, 다시 말해 row의 개수를 확인하는 특수기호입니다. `.N`은 주로 `by`와 함께 됩니다. `by`를 통해 특정 집단의 분포별로 몇 명이 있는지, 또는 몇 건의 데이터가 있는지 확인합니다.
-
-예를 들면 인종(`race`)에 따른 데이터의 수를 확인하고 싶을 때는 아래와 같이 사용합니다.
-
-```{r}
-dt[,.N, by=race]
-```
-
-::: callout-note
-## .N이 갖는 의미
-
-사실 그룹별 응답 수는 `table()` 함수를 이용해도 구할 수 있습니다. 그러나 .N을 이용하게 되면 각 범주별 빈도수를 [data.table 문법 내에서]{.underline} 구할 수 있기 때문에 활용성에 있어 `table()`보다 더 뛰어나다고 할 수 있습니다.
-
-```{r}
-dt[,c(.N, lapply(.SD,mean)),by=race,.SDcols='age']
-```
-:::
-
-### 3) `.I`
-
-`.I`는 j 부분에서 행을 다루기 특수기호입니다.
-
-보통 `.I`는 특정 조건을 만족하는 row의 위치를 찾을 때 사용합니다. 특히 by가 있는 경우, 다시 말해 범주별로 row의 위치를 찾을 때 많이 사용합니다.
-
-집단별 row가 필요하지 않다면, j가 아닌 i 부분에서 행을 선택할 수 있습니다. 그러나 i 부분만 입력하게 될 경우, 집단 별 조건을 확인할 수 없습니다. 왜냐하면 by를 사용하기 위해서는 j가 선행되어야 하기 때문입니다.
-
-따라서 i 부분에서 바로 row를 filtering 하는 것이 아니라, j 부분에서 집단별로 조건을 만족시키는 행의 번호를 찾아서 사용합니다.
-
-또한 `.I`를 사용하는 경우 행의 번호를 확인할 수 있기 때문에, 그 행의 번호에 해당하는 모든 column을 사용할 수 있습니다.
-
-예를 들어, 인종별 첫 번째 행을 선택하는 경우는 다음과 같이 실행할 수 있습니다.
-
-```{r}
-dt[dt[,.I[1L],by=race]$V1]
-```
-
-이번에는 인종 별로 첫 번째 행이 아니라 Height가 최대인 (키가 가장 큰) 데이터를 추출해보겠습니다.
-
-```{r}
-dt[dt[,.I[max(Height,na.rm=T)],by=race]$V1]
-dt[dt[,.I[which.max(Height)],by=race]$V1]
-```
-
 ------------------------------------------------------------------------
 
 ## 2. 데이터 병합
@@ -178,13 +184,13 @@ R에서 데이터를 묶는 방법은 크게 두 종류가 있습니다. 하나�
 
 ### 1) bind
 
-bind 계열의 함수는 두 개 이상의 데이터를 합치는 함수입니다. merge는 뒤에서 언급하겠지만, bind는 merge와 달리 특정한 기준이 되는 column이 필요하지 않습니다.
+bind 계열의 함수는 두 개 이상의 데이터를 합치는 함수입니다. merge는 뒤에서 언급하겠지만, bind는 merge와 달리 특정한 열을 기준으로 데이터가 합쳐지지 않습니다.
 
 bind에는 `rbind()`, `cbind()`가 있습니다.
 
 #### a. `rbind()`
 
-`rbind()`는 row-bind의 약자로, 두 가지 이상의 데이터의 행을 묶는 함수입니다. 행을 묶는 것이기 때문에 데이터가 아래로 추가됩니다.
+`rbind()`는 row-bind의 약자로, 두 개 이상의 데이터의 행을 합치는 함수입니다. 행을 묶는 것이기 때문에 데이터가 아래로 추가됩니다.
 
 ```{r}
 rbind(1:3,c('a','b','c'))
@@ -196,7 +202,7 @@ rbind(1:3,c('a','b','c'))
 rbind(c(1:3),c(1:4))
 ```
 
-만약 column 이름을 갖는 matrix나 data.table 형태를 `rbind()`하고자 하는 경우는 합치고자 하는 데이터의 column이름이 같아야 합니다.
+만약 column 이름을 갖는 matrix나 data.table 형태를 `rbind()`하고자 하는 경우는 합치고자 하는 데이터의 열 이름이 같아야 합니다.
 
 ```{r}
 require(data.table)
@@ -217,7 +223,7 @@ b <- data.table(num=6:10,
 rbind(a,b)
 ```
 
-이럴 때는 column 이름을 무시하거나, 이름이 같지 않은 column을 `NA`로 채워줄 수 있습니다.
+이럴 때는 `use.names=FALSE` 인자를 통해 column 이름을 무시하거나, 이름이 같지 않은 `fill=TRUE` 인자를 통해 column을 `NA`로 채워줄 수 있습니다.
 
 ```{r}
 rbind(a,b, use.names=F)
@@ -249,11 +255,14 @@ cbind(a,b)
 
 inner join은 두 가지 데이터의 기준이 되는 column 에서 공통된 값들만 갖는 데이터를 합치는 방법입니다.
 
-data.table에서 inner join 하는 방법은 아래와 같습니다.
+`data.table`에서 inner join 하는 방법은 아래와 같습니다.
 
 ```{r}
-merge(, by=)
+#| eval: false
+merge(a,b, by='ID')
 ```
+
+a와 b라고 하는 데이터를 ID라는 이름을 갖는 열을 기준으로 합칩니다.
 
 #### b. left / right join
 
@@ -262,8 +271,9 @@ left/right join은 두 가지 데이터에서 왼(오른)쪽 데이터의 column
 data.table에서 left join과 right join을 하는 방법은 아래와 같습니다.
 
 ```{r}
-merge(,by, all.x=T) # left join
-merge(,by, all.y=T) # right join
+#| eval: false
+merge(A, B, by='ID', all.x=T) # left join
+merge(A, B, by='ID', all.y=T) # right join
 ```
 
 all.x 인자에 TRUE를 주면 left join을, all.y는 right join을 의미합니다.
@@ -277,13 +287,15 @@ outer join은 두 가지 데이터의 모든 column을 기준으로 데이터를
 data.table에서 outer join을 하는 방법은 아래와 같습니다.
 
 ```{r}
-merge(,all.x)
+#| eval: false
+merge(A,B, by='ID',all = T)
 ```
 
 merge의 경우 공통된 이름의 column을 기준으로 두 데이터를 합치는 방법이라고 했습니다. 그런데 만약 기준이 되는 column의 이름이 다르다면 어떻게 해야 할까요? 이때는 `by.x`와 `by.y` 인자를 사용합니다.
 
 ```{r}
-merge(by.x, by.y)
+#| eval: false
+merge(A, B, by.x="ID", by.y="id")
 ```
 
 기존에는 `by`인자에 공통된 column명을 넣으면 됐지만, 두 가지 데이터의 column이 다르기 때문에 각각 by.x와 by.y에 기준이 되는 column 이름을 넣어주는 것입니다.
@@ -296,7 +308,7 @@ merge(by.x=c('a','b'), by.y=c('A','B'))
 ```
 :::
 
-.EACHI: X와 Y를 합칠 때, 요소별 합쳐진 개수 확인
+`.EACHI`: X와 Y를 합칠 때, 요소별 합쳐진 개수 확인
 
 ```{r}
 X = data.table(x = c(1,1,1,2,2,5,6), y = 1:7, key = "x")
@@ -383,15 +395,15 @@ melt(dt,
 
 ### 2) dcast
 
-이렇게 옆으로 나열된 column들을 특정한 축을 기준으로 데이터를 variable과 value라는 column으로 녹입니다.
+이렇게 옆으로 나열된 column들을 특정한 열을 기준으로 데이터를 variable과 value라는 column으로 녹입니다.
 
 ::: callout-tip
 ## 왜 dcast인가요?
 
-cast는 어떤 형태로 데이터를 굳히는 것을 의미합니다. 기존에 melt로 녹아있던 데이터를 casting 한다고 이해하시면 됩니다.
+cast는 어떤 형태로 데이터를 굳히는 것을 의미합니다. 기존에 melt된(녹아있던) 데이터를 casting 한다고 이해하시면 됩니다.
 :::
+`dcast()`는 long data에서 축 column에서 특정 값들을 기준으로 넓게 펼칠 수 있습니다. `dcast()`에서는 formula 형태로 기준이 되는 축과 wide하게 변경해줄 column을 선택해주면 됩니다. 이 때 formula는 `~`을 기준으로 `기준 변수~ 열 이름 변수` 형태로 작성합니다.
 
-dcast는 long data에서 축 column에서 특정 값들을 기준으로 넓게 펼칠 수 있습니다. dcast에서는 formula 형태로 기준이 되는 축과 wide하게 변경해줄 column을 선택해주면 됩니다. 이 때 formula 형태라는 것은 \~ 을 기준으로 기준 축과 column
 
 ```{r}
 dcast(data=air_melt,
@@ -401,29 +413,30 @@ dcast(data=air_melt,
         )
 ```
 
-dcast에는 fun.aggregate라는 인자가 존재합니다. 이 인자의 경우 만약 기준이 되는 column의 하나의 값에 여러 데이터(row)가 존재하는 경우에 사용합니다.
+또한 `dcast()`에는 `fun.aggregate`라는 인자가 존재합니다. 이 인자에는 만약 동일한 기준 열의 값에 두 개 이상의 데이터가 존재할 때, 이를 요약하기 위한 함수를 입력합니다.
 
 `airquality` 데이터를 예로 들어보겠습니다. 앞서 보여드린 air_melt의 경우 Month와 Day의 두 column을 기준으로 melt했기 때문에 기준 column에 공통되는 값들이 없었습니다 (5/1\~ 9/27 까지 일일 데이터이므로).
 
-이번에는 `Day`만 기준 column으로 놓고 melt를 한 데이터를 다시 dcast 해보겠습니다.
+이번에는 `Day`만 기준 column으로 놓고 `melt()` 한 데이터를 다시 `dcast()` 해보겠습니다.
 
 ```{r}
-air_melt2 <- melt(air_dt, id.vars = 'Day',measure.vars = c('Ozone','Solar.R','Wind','Temp'))
+air_melt2 <- melt(air_dt, id.vars = 'Day', 
+                  measure.vars = c('Ozone','Solar.R','Wind','Temp'))
 
 air_melt2
 ```
 
-`air_melt`와 달리 air_melt2에서는 Day별로 여러 개의 데이터가 존재하게 됩니다 (Day가 1인 경우, 5월 1일, 6월 1일 \~9월 1일 등의 데이터가 있기 때문입니다).
+`air_melt`와 달리 `air_melt2`에서는 Day별로 여러 개의 데이터가 존재하게 됩니다 (Day가 1인 경우, 5월 1일, 6월 1일 ~ 9월 1일 등의 데이터가 있기 때문입니다).
 
-이 데이터를 dcast하게 된다면 `Aggregate function missing, defaulting to 'length'` 아래와 같은 메시지가 뜹니다.
+이 데이터를 `dcast()`로 넓게 펼치게 된다면 하게 된다면 `Aggregate function missing, defaulting to 'length'` 아래와 같은 메시지가 뜹니다.
 
 ```{r}
 dcast(air_melt2, Day ~ variable, value.var='value')
 ```
 
-이 메시지가 뜬 이유는 다음과 같습니다. `Day`라는 고유한 값은 1\~31까지 밖에 없는데, `air_melt2`에서는 `Day`별로 여러 건의 데이터가 있었습니다. 그렇기 때문에 dcast에서는 `Day`별 요약 또는 집계를 수행합니다. 이 때 `fun.aggregate`라는 인자에 어떻게 요약할 것인지 지정해주지 않았기 때문에 초기값인 `length()`가 적용된 것입니다.
+이 메시지가 뜬 이유는 다음과 같습니다. `Day`라는 고유한 값은 1~31까지 밖에 없는데, `air_melt2`에서는 `Day`별로 여러 건의 데이터가 있었습니다. 그렇기 때문에 dcast에서는 `Day`별 집계를 수행합니다. 이 때 `fun.aggregate`라는 인자에 어떻게 요약할 것인지 지정해주지 않았기 때문에 초기값인 `length()`가 적용된 것입니다.
 
-따라서 평균이나 중앙값, 최소, 최대 등 요약함수를 넣어주면 `Day`별로 여러 건의 데이터를 요약한 값으로 데이터가 펼쳐지게 됩니다.
+따라서 평균이나 중앙값, 최소, 최대 등 요약함수를 넣어주면 데이터가 펼쳐졌을 때, `Day`별로 여러 건의 데이터를 요약한 값이 들어가게 됩니다.
 
 ```{r}
 dcast(air_melt2, Day ~ variable, 
@@ -436,7 +449,7 @@ dcast(air_melt2, Day ~ variable,
 ```{r}
 dcast(air_melt2, Day ~ variable, 
       value.var='value',
-      fun.aggregate = function(x)x[1])
+      fun.aggregate = function(x) x[1])
 ```
 
 ::: callout-note
